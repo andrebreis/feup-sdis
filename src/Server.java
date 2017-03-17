@@ -7,11 +7,11 @@ import java.net.SocketException;
 public class Server {
 
     public static void main(String[] args) throws IOException {
-        if(args.length != 3){
-            System.out.println("Usage: java Server <srvc_port> <mcast_addr> <mcast_port>");
+        if(args.length != 1){
+            System.out.println("java Server <srvc_port>");
             return;
         }
-        new ServerThread(Integer.parseInt(args[0]), args[1], Integer.parseInt(args[2])).start();
+        new ServerThread(Integer.parseInt(args[0])).start();
     }
 
 }
