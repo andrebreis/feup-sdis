@@ -1,9 +1,8 @@
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
+import java.net.*;
 import java.util.HashMap;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.regex.Pattern;
 
 /**
@@ -11,19 +10,63 @@ import java.util.regex.Pattern;
  */
 public class ServerThread extends Thread {
 
-    protected DatagramSocket socket = null;
-    private HashMap<String,String> licensePlates;
+    private class BroadcastAddress extends TimerTask {
 
-    public ServerThread(int port) throws SocketException {
-        this("Server", port);
+        private String msg;
+        private InetAddress group;
+        private MulticastSocket socket;
+        private int port;
+
+        public BroadcastAddress(MulticastSocket socket , InetAddress group, String msg, int port){
+            this.socket = socket;
+            this.group = group;
+            this.msg = msg;
+            this.port = port;
+        }
+
+        public void run(){
+
+            DatagramPacket packet = new DatagramPacket(msg.getBytes(), msg.length(),
+                    group, port);
+//            System.out.println(msg);
+            try {
+                socket.setTimeToLive(1);
+                socket.send(packet);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
     }
 
-    public ServerThread(String name, int port) throws SocketException {
+    protected DatagramSocket socket = null;
+    private HashMap<String,String> licensePlates;
+//    protected BroadcastAddress multicastThread = null;
+
+
+    public ServerThread(int serverPort, String multicastAddress, int multicastPort) throws IOException {
+        this("Server", serverPort, multicastAddress, multicastPort);
+    }
+
+    public ServerThread(String name, int serverPort, String multicastAddress, int multicastPort) throws IOException {
         super(name);
 
-        socket = new DatagramSocket(port);
+        socket = new DatagramSocket(serverPort);
 
         licensePlates = new HashMap<>();
+
+        // MULTICAST
+        System.out.println(multicastAddress);
+        InetAddress multicastAddr = InetAddress.getByName(multicastAddress);
+        MulticastSocket multicastSocket = new MulticastSocket(multicastPort);
+        multicastSocket.joinGroup(multicastAddr);
+
+        InetAddress hostAddr = InetAddress.getLocalHost();
+        String msg = hostAddr.getHostAddress() + " " + serverPort;
+
+        Timer timer = new Timer();
+        timer.schedule(new BroadcastAddress(multicastSocket, multicastAddr, msg, multicastPort), 0, 1000);
+
     }
 
 
@@ -31,7 +74,7 @@ public class ServerThread extends Thread {
 
         while (true) {
             try {
-                byte[] buf = new byte[256];
+                byte[] buf = new byte[512];
 
                 // receive request
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
