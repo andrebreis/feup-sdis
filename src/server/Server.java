@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.regex.Pattern;
 
 public class Server implements RemoteInterface {
-    private HashMap<String,String> licensePlates;
+    private HashMap<String, String> licensePlates;
 
 
     public Server() {
@@ -38,12 +38,12 @@ public class Server implements RemoteInterface {
     @Override
     public String register(String plate, String owner) throws RemoteException {
 
-        if(!Pattern.matches("\\w\\w-\\w\\w-\\w\\w", plate))
+        if (!Pattern.matches("\\w\\w-\\w\\w-\\w\\w", plate))
             return "-1";
-        if(licensePlates.containsKey(plate))
+        if (licensePlates.containsKey(plate))
             return "-1";
 
-        licensePlates.put(plate,owner);
+        licensePlates.put(plate, owner);
         return Integer.toString(licensePlates.size());
 
     }
@@ -51,7 +51,7 @@ public class Server implements RemoteInterface {
     @Override
     public String lookup(String plate) throws RemoteException {
 
-        if(!licensePlates.containsKey(plate))
+        if (!licensePlates.containsKey(plate))
             return "NOT_FOUND";
         return licensePlates.get(plate);
     }
