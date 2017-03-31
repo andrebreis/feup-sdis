@@ -63,12 +63,12 @@ public class FileManager {
         System.out.println("Enter the full path of the file you want to split");
         String path = reader.nextLine();
         splitFile(new File(path));
-        File typeOf = new File("/media/chrx/9016-4EF8/");
-        ArrayList<File> chunks = getChunks("exp6_step5.pcapng", typeOf);
+        File thisFolder = new File(".");
+        ArrayList<File> chunks = getChunks(path, thisFolder);
         for (File f:
              chunks) {
             System.out.println(f.getName());
         }
-        mergeFiles(chunks, new File("/media/chrx/9016-4EF8/new.pcapng"));
+        mergeFiles(chunks, new File("new" + path));
     }
 }
