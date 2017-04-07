@@ -1,11 +1,10 @@
 package server;
 
-import channels.BackupChannelThread;
-import channels.ChannelThread;
-import channels.ControlChannelThread;
-import channels.RestoreChannelThread;
+import channels.*;
 import file_manager.FileManager;
+import file_manager.Hash;
 
+import java.io.File;
 import java.rmi.RemoteException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -68,6 +67,9 @@ public class PeerThread extends Thread implements Protocol {
     @Override
     public void delete(String version, String senderId, String path) throws RemoteException {
 
+        String fileId = Hash.getFileId(new File(path));
+        Message delete = new Message("DELETE", "1.0", serverID, fileId);
+        delete.sendMessage(PeerThread.controlThread.getChannelSocket(), PeerThread.controlThread.getAddress(), PeerThread.controlThread.getPort());
 
     }
 
