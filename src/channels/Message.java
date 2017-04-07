@@ -75,5 +75,15 @@ public class Message {
 
     }
 
+    public static int getHeaderLength(byte[] message, int length) {
+        for (int i = 3; i < length; i++) {
+            if (message[i - 3] == '\r' && message[i - 2] == '\n'
+                    && message[i - 1] == '\r' && message[i] == '\n')
+                return i;
+        }
+        return -1;
+    }
+
+
 
 }

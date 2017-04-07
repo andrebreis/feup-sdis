@@ -14,20 +14,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class BackupChannelThread extends ChannelThread {
 
-    private final int VERSION = 1, SENDER_ID = 2, FILE_ID = 3, CHUNK_NO = 4, REPLICATION_DEG = 5;
 
     public BackupChannelThread(String address, int port) {
         super(address, port);
     }
 
-    private int getHeaderLength(byte[] message, int length) {
-        for (int i = 3; i < length; i++) {
-            if (message[i - 3] == CR && message[i - 2] == LF
-                    && message[i - 1] == CR && message[i] == LF)
-                return i;
-        }
-        return -1;
-    }
 
     public void storeChunk(String fileId, int chunkNo, int replicationDegree, byte[] chunk) {
         if (!PeerThread.savedChunks.containsKey(fileId))
@@ -37,10 +28,13 @@ public class BackupChannelThread extends ChannelThread {
         if (!PeerThread.desiredFileReplication.containsKey(fileId))
             PeerThread.desiredFileReplication.put(fileId, replicationDegree);
 
-        if (!PeerThread.currentChunkReplication.containsKey(fileId))
-            PeerThread.currentChunkReplication.put(fileId, new ConcurrentHashMap<>());
+        if (!PeerThread.serversContaining.containsKey(fileId))
+            PeerThread.serversContaining.put(fileId, new ConcurrentHashMap<>());
 
-        PeerThread.currentChunkReplication.get(fileId).put(chunkNo, 1);
+        if(!PeerThread.serversContaining.get(fileId).containsKey(chunkNo))
+            PeerThread.serversContaining.get(fileId).put(chunkNo, new HashSet<>());
+
+        PeerThread.serversContaining.get(fileId).get(chunkNo).add(PeerThread.serverID);
 
         FileManager.storeChunk(chunk, fileId, Integer.toString(chunkNo));
     }
@@ -62,9 +56,9 @@ public class BackupChannelThread extends ChannelThread {
         msg.sendMessageWithDelay(PeerThread.controlThread.channelSocket, PeerThread.controlThread.address, PeerThread.controlThread.port);
     }
 
-    public void processMessage(byte[] message, int length, InetAddress address, int port) {
+    public void processMessage(byte[] message, int length) {
 
-        int headerLength = getHeaderLength(message, length);
+        int headerLength = Message.getHeaderLength(message, length);
         if (headerLength == -1) {
             System.out.println("Message Header doesn't end with <CRLF><CRLF>");
             return;
@@ -91,7 +85,7 @@ public class BackupChannelThread extends ChannelThread {
             try {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 channelSocket.receive(packet);
-                processMessage(packet.getData(), packet.getLength(), packet.getAddress(), packet.getPort());
+                processMessage(packet.getData(), packet.getLength());
             } catch (IOException e) {
                 e.printStackTrace();
             }

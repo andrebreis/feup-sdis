@@ -82,7 +82,7 @@ public class FileManager {
                     int noSentCommands = 0;
 
                     Message putChunk = new Message("PUTCHUNK", "1.0", PeerThread.serverID, fileId, chunkNo, replicationDegree, chunk, chunkSize);
-                    while(noSentCommands < 5 && PeerThread.currentChunkReplication.get(fileId).get(chunkNo) < replicationDegree) {
+                    while(noSentCommands < 5 && PeerThread.serversContaining.get(fileId).get(chunkNo).size() < replicationDegree) {
                         putChunk.sendMessage(PeerThread.backupThread.getChannelSocket(), PeerThread.backupThread.getAddress(), PeerThread.backupThread.getPort());
                         try {
                             Thread.sleep(2 ^ noSentCommands * 1000);

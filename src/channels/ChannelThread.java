@@ -9,10 +9,9 @@ import java.net.MulticastSocket;
  */
 public class ChannelThread extends Thread {
 
+    protected final int VERSION = 1, SENDER_ID = 2, FILE_ID = 3, CHUNK_NO = 4, REPLICATION_DEG = 5;
 
     protected static final int MAX_HEADER_SIZE = 1024;
-    protected static final byte CR = 0xD;
-    protected static final byte LF = 0xA;
     protected static final int MAX_CHUNK_SIZE = 64 * 1000;
     protected MulticastSocket channelSocket;
     protected InetAddress address;

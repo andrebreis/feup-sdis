@@ -21,8 +21,8 @@ public class PeerThread extends Thread implements Protocol {
 
     private static String state;
 
-    // < fileId -> < chunkNo -> currentReplicationNr > >
-    public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Integer>> currentChunkReplication;
+    // < fileId -> < chunkNo -> serversContainingChunk > >
+    public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Set<String>>> serversContaining;
     // < fileId -> desiredReplication >
     public static ConcurrentHashMap<String,  Integer> desiredFileReplication;
     // < fileId -> savedChunks >
@@ -37,6 +37,10 @@ public class PeerThread extends Thread implements Protocol {
         PeerThread.protocolVersion = protocolVersion;
         PeerThread.serverID = serverID;
         PeerThread.serviceAccessPoint = serviceAccessPoint;
+
+        PeerThread.serversContaining = new ConcurrentHashMap<>();
+        PeerThread.desiredFileReplication = new ConcurrentHashMap<>();
+        PeerThread.savedChunks = new ConcurrentHashMap<>();
 
         PeerThread.state = "STARTED";
 
