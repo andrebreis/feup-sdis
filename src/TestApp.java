@@ -72,6 +72,7 @@ public class TestApp {
                 break;
 
             case "STATE":
+
                 try{
                     initiatorPeer.state();
                 } catch (RemoteException e) {
