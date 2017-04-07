@@ -1,10 +1,13 @@
 package file_manager;
 
+import channels.Message;
+import server.PeerThread;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Scanner;
+import java.util.concurrent.Executors;
 
 /**
  * Created by ines on 29-03-2017.
@@ -48,7 +51,7 @@ public class FileManager {
     }
 
     public static void backupFile(String filepath, int replicationDegree){
-        int partCounter = 1;//I like to name parts from 001, 002, 003, ...
+        int chunkNo = 1;//I like to name parts from 001, 002, 003, ...
         //you can change it to 0 if you want 000, 001, ...
 
         File file = new File(filepath);
@@ -63,26 +66,53 @@ public class FileManager {
             do {
                 tmp = bis.read(buffer);
                 //write each chunk of data into separate file with different number in name
-                File newFile = new File(chunksDirectory, name + "."
-                        + String.format("%05d", partCounter++));
-                newFile.getParentFile().mkdirs();
-                    backupChunk(buffer, tmp == -1 ? 0 : tmp, replicationDegree, getFileId(file), Integer.toString(partCounter));
+                backupChunk(buffer, tmp == -1 ? 0 : tmp, replicationDegree, Hash.getFileId(file), chunkNo);
             } while (tmp == MAX_CHUNK_SIZE);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static void backupChunk(byte[] chunk, int chunkSize, int replicationDegree, String fileId, String chunkNo){
-        //TODO: SEND CHUNK TO MBC
-        System.out.println(new String(chunk));
+    public static void backupChunk(byte[] chunk, int chunkSize, int replicationDegree, String fileId, int chunkNo){
+        Executors.newSingleThreadExecutor().execute(
+                () -> {
+                    int noSentCommands = 0;
+
+                    Message putChunk = new Message("PUTCHUNK", "1.0", PeerThread.serverID, fileId, chunkNo, replicationDegree, chunk, chunkSize);
+                    while(noSentCommands < 5 && PeerThread.currentChunkReplication.get(fileId).get(chunkNo) < replicationDegree) {
+                        putChunk.sendMessage(PeerThread.backupThread.getChannelSocket(), PeerThread.backupThread.getAddress(), PeerThread.backupThread.getPort());
+                        try {
+                            Thread.sleep(2 ^ noSentCommands * 1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        noSentCommands++;
+                    }
+                    if(noSentCommands == 5)
+                        System.out.println("Couldn't backup chunk appropriately");
+                }
+        );
     };
 
+    public static void storeChunk(byte[] chunk, String fileId, String chunkNo){
+        File chunkFile = new File(chunksDirectory, fileId + chunkNo);
+        chunkFile.getParentFile().mkdirs();
+        try {
+            FileOutputStream out = new FileOutputStream(chunkFile);
+            out.write(chunk);
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void main(String[] args) throws IOException {
-        Scanner reader = new Scanner(System.in);  // Reading from System.in
-        System.out.println("Enter the full path of the file you want to split");
-        String path = reader.nextLine();
-        backupFile(path,1);
+//        Scanner reader = new Scanner(System.in);  // Reading from System.in
+//        System.out.println("Enter the full path of the file you want to split");
+//        String path = reader.nextLine();
+//        backupFile(path,1);
+
+        FileManager.storeChunk("asdsadsad".getBytes(), "testid", "testchunkno");
 //        File toSplit = new File(path);
 //        splitFile(toSplit);
 //        File chunksContainer = new File(chunksDirectory);
