@@ -64,6 +64,7 @@ public class PeerThread extends Thread implements Protocol {
     @Override
     public void delete(String version, String senderId, String path) throws RemoteException {
 
+
     }
 
     @Override

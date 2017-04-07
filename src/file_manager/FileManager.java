@@ -5,8 +5,11 @@ import server.PeerThread;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.Executors;
 
 /**
@@ -106,13 +109,29 @@ public class FileManager {
         }
     }
 
+    public static void deleteFile(String filepath) throws IOException {
+
+        File file = new File(filepath);
+        String fileId = Hash.getFileId(file);
+
+        if(!PeerThread.savedChunks.containsKey(fileId)) return;
+
+        Set<Integer> chunks = PeerThread.savedChunks.get(fileId);
+
+        for(Integer c: chunks){
+            Path path = Paths.get(chunksDirectory + fileId + c.toString());
+            Files.delete(path);
+        }
+
+    }
+
     public static void main(String[] args) throws IOException {
 //        Scanner reader = new Scanner(System.in);  // Reading from System.in
 //        System.out.println("Enter the full path of the file you want to split");
 //        String path = reader.nextLine();
 //        backupFile(path,1);
 
-        FileManager.storeChunk("asdsadsad".getBytes(), "testid", "testchunkno");
+        FileManager.deleteFile("/home/ines/SDIS/sid.jpg");
 //        File toSplit = new File(path);
 //        splitFile(toSplit);
 //        File chunksContainer = new File(chunksDirectory);
