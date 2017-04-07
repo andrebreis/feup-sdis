@@ -16,4 +16,6 @@ public interface Protocol extends Remote{
 
     void reclaim(String version, String senderId, String path) throws RemoteException;
 
+    String state() throws RemoteException;
+
 }

@@ -70,6 +70,13 @@ public class TestApp {
                     e.printStackTrace();
                 }
                 break;
+
+            case "STATE":
+                try{
+                    initiatorPeer.state();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
         }
 
     }
