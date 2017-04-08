@@ -1,5 +1,9 @@
 package server;
 
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+
 /**
  * Created by chrx on 4/3/17.
  */
@@ -36,15 +40,28 @@ public class Peer {
 
     }
 
-    public void main(String[] args){
+    public static void main(String[] args) {
 
-        if(args.length != 6){
+        if (args.length != 6) {
             System.out.println("Usage: java Peer <ProtocolVersion> <ServerID> <ServiceAccessPoint> <MC_addr>:<MC_port> <MDB_addr>:<MDB_port> <MDR_addr>:<MDR_port>");
             return;
         }
 
-        new PeerThread(protocolVersion, serverID, serviceAccessPoint, mcAddress, mcPort, mdbAddress, mdbPort, mdrAddress, mdrPort).start();
+        Peer p = new Peer();
+        p.parseArguments(args);
 
+        PeerThread peer = new PeerThread(p.protocolVersion, p.serverID, p.serviceAccessPoint, p.mcAddress, p.mcPort, p.mdbAddress, p.mdbPort, p.mdrAddress, p.mdrPort);
+        peer.start();
+        try {
+            Protocol rmiObject = (Protocol) UnicastRemoteObject.exportObject(peer, p.serviceAccessPoint);
+            LocateRegistry.createRegistry(p.serviceAccessPoint);
+            Registry registry = LocateRegistry.getRegistry();
+            registry.rebind(p.serverID, rmiObject);
+            System.err.println("Server ready");
+        } catch (Exception e) {
+            System.err.println("Server exception: " + e.toString());
+            e.printStackTrace();
+        }
     }
 
 }
