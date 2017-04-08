@@ -32,7 +32,10 @@ public class ControlChannelThread extends ChannelThread {
             PeerThread.serversContaining.get(fileId).put(chunkNo, new HashSet<>());
 
         PeerThread.serversContaining.get(fileId).get(chunkNo).add(headerParams[SENDER_ID]);
+
+        PeerThread.saveMetadata();
     }
+
 
     public void processMessage(byte[] message, int length) {
 

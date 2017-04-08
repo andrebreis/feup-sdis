@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 public class FileManager {
 
     final private static String chunksDirectory = "chunks/";
+    final public static String metadataPath = ".metadata/metadata";
     final private static String restoredFilesDirectory = "restored_files/";
 
     final private static int MAX_CHUNK_SIZE = 64 * 1000;
@@ -118,6 +119,8 @@ public class FileManager {
         }
 
         PeerThread.savedChunks.remove(fileId);
+
+        PeerThread.saveMetadata();
 
     }
 

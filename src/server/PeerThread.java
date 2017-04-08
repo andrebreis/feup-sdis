@@ -4,7 +4,7 @@ import channels.*;
 import file_manager.FileManager;
 import file_manager.Hash;
 
-import java.io.File;
+import java.io.*;
 import java.rmi.RemoteException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,17 +29,17 @@ public class PeerThread extends Thread implements Protocol {
 
     public static ChannelThread controlThread, backupThread, restoreThread;
 
-//    private MulticastSocket controlChannel, backupChannel, restoreChannel;
-
     public PeerThread(String protocolVersion, String serverID, int serviceAccessPoint, String mcAddress, int mcPort, String mdbAddress, int mdbPort, String mdrAddress, int mdrPort) {
 
         PeerThread.protocolVersion = protocolVersion;
         PeerThread.serverID = serverID;
         PeerThread.serviceAccessPoint = serviceAccessPoint;
 
+
         PeerThread.serversContaining = new ConcurrentHashMap<>();
         PeerThread.desiredFileReplication = new ConcurrentHashMap<>();
         PeerThread.savedChunks = new ConcurrentHashMap<>();
+        loadMetadata();
 
         PeerThread.state = "STARTED";
 
@@ -50,6 +50,62 @@ public class PeerThread extends Thread implements Protocol {
         controlThread.start();
         backupThread.start();
         restoreThread.start();
+
+    }
+
+    @SuppressWarnings("unchecked")
+    public void loadMetadata() {
+        File metadata = new File(FileManager.metadataPath);
+
+        if(!metadata.exists()) {
+            metadata.getParentFile().mkdirs();
+            try {
+                metadata.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            try {
+                FileInputStream fileIn = new FileInputStream(metadata);
+                ObjectInputStream in = new ObjectInputStream(fileIn);
+
+                PeerThread.serversContaining = (ConcurrentHashMap<String, ConcurrentHashMap<Integer, Set<String>>>) in.readObject();
+                PeerThread.desiredFileReplication = (ConcurrentHashMap<String, Integer>) in.readObject();
+                PeerThread.savedChunks = (ConcurrentHashMap<String, Set<Integer>>) in.readObject();
+
+                in.close();
+                fileIn.close();
+            } catch (IOException | ClassNotFoundException ignored) {
+            }
+        }
+    }
+
+    public static void saveMetadata() {
+        File metadata = new File(FileManager.metadataPath);
+        if(!metadata.exists()) {
+            metadata.getParentFile().mkdirs();
+            try {
+                metadata.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            try {
+                FileOutputStream fileOut = new FileOutputStream(metadata);
+                ObjectOutputStream out = new ObjectOutputStream(fileOut);
+
+                out.writeObject(serversContaining);
+                out.writeObject(desiredFileReplication);
+                out.writeObject(savedChunks);
+
+                out.close();
+                fileOut.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
     }
 

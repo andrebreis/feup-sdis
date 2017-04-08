@@ -37,6 +37,7 @@ public class BackupChannelThread extends ChannelThread {
         PeerThread.serversContaining.get(fileId).get(chunkNo).add(PeerThread.serverID);
 
         FileManager.storeChunk(chunk, fileId, Integer.toString(chunkNo));
+        PeerThread.saveMetadata();
     }
 
     //TODO: enhancement wait first and store after
