@@ -1,5 +1,6 @@
 package channels;
 
+import file_manager.FileManager;
 import server.Peer;
 import server.PeerThread;
 
@@ -47,6 +48,13 @@ public class ControlChannelThread extends ChannelThread {
 
         if (messageParams[0].equals("STORED")) {
             processStored(messageParams);
+        }
+        else if (messageParams[0].equals("DELETE")) {
+            try {
+                FileManager.deleteFile(messageParams[FILE_ID]);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
     }

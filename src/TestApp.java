@@ -26,7 +26,7 @@ public class TestApp {
             Registry registry = LocateRegistry.getRegistry();
             Protocol initiatorPeer = (Protocol) registry.lookup(peerAccessPoint);
 
-            String path = "";
+            String path;
             switch (protocol) {
                 case "BACKUP":
                     if (args.length != 4)
