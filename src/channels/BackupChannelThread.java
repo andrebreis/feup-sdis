@@ -6,6 +6,7 @@ import server.PeerThread;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -53,7 +54,7 @@ public class BackupChannelThread extends ChannelThread {
         if (!PeerThread.savedChunks.containsKey(fileID) || !PeerThread.savedChunks.get(fileID).contains(chunkNumber))
             storeChunk(fileID, chunkNumber, Integer.parseInt(headerParams[REPLICATION_DEG]), body);
 
-        Message msg = new Message("STORED", headerParams[VERSION], headerParams[SENDER_ID], headerParams[FILE_ID], headerParams[CHUNK_NO]);
+        Message msg = new Message("STORED", headerParams[VERSION], PeerThread.serverID , headerParams[FILE_ID], headerParams[CHUNK_NO]);
         msg.sendMessageWithDelay(PeerThread.controlThread.channelSocket, PeerThread.controlThread.address, PeerThread.controlThread.port);
     }
 
@@ -90,7 +91,6 @@ public class BackupChannelThread extends ChannelThread {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
 
         }
     }
