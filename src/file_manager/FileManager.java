@@ -103,12 +103,12 @@ public class FileManager {
         }
     }
 
-    public static void deleteFile(String filepath) throws IOException {
-
-        File file = new File(filepath);
-        String fileId = Hash.getFileId(file);
-
-        if(!PeerThread.savedChunks.containsKey(fileId)) return;
+    public static void deleteFile(String fileId) throws IOException {
+        if(!PeerThread.savedChunks.containsKey(fileId)){
+            PeerThread.serversContaining.remove(fileId);
+            PeerThread.desiredFileReplication.remove(fileId);
+            return;
+        }
 
         Set<Integer> chunks = PeerThread.savedChunks.get(fileId);
 
