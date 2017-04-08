@@ -15,69 +15,52 @@ public class TestApp {
 
     public static void main(String[] args) {
 
-        String peerAccessPoint = args[0];
-        String protocol = args[1].toUpperCase();
-        String path = "";
-
-        Protocol initiatorPeer = null;
-
-        try {
-            Registry registry = LocateRegistry.getRegistry(args[0]);
-            initiatorPeer = (Protocol) registry.lookup(peerAccessPoint);
-        } catch (RemoteException | NotBoundException e) {
-            e.printStackTrace();
+        if (args.length < 2) {
+            System.out.println("Usage: java TestApp <peer_ap> <sub_protocol> <opnd_1> <opnd_2(opcional-rd)>");
         }
 
+        String peerAccessPoint = args[0];
+        String protocol = args[1].toUpperCase();
 
-        switch(protocol){
+        try {
+            Registry registry = LocateRegistry.getRegistry();
+            Protocol initiatorPeer = (Protocol) registry.lookup(peerAccessPoint);
 
-            case "BACKUP":
-                int replicationDegree = Integer.parseInt(args[3]);
-
-                try{
-                    initiatorPeer.backup("1",peerAccessPoint,path,replicationDegree);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-
-                break;
-
-            case "RESTORE":
-
-                try{
-                    initiatorPeer.restore("1", peerAccessPoint, path);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-
-                break;
-
-            case "DELETE":
-
-                try{
-                    initiatorPeer.delete("1", peerAccessPoint, path);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-
-                break;
-
-            case "RECLAIM":
-
-                try{
-                    initiatorPeer.reclaim("1", peerAccessPoint, path);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-                break;
-
-            case "STATE":
-
-                try{
+            String path = "";
+            switch (protocol) {
+                case "BACKUP":
+                    if (args.length != 4)
+                        System.out.println("Usage for BACKUP: java TestApp <peer_ap> BACKUP <filepath> <replication_degree>");
+                    path = args[2];
+                    int replicationDegree = Integer.parseInt(args[3]);
+                    initiatorPeer.backup("1.0", peerAccessPoint, path, replicationDegree);
+                    break;
+                case "RESTORE":
+                    if (args.length != 3)
+                        System.out.println("Usage for RESTORE: java TestApp <peer_ap> RESTORE <filepath>");
+                    path = args[2];
+                    initiatorPeer.restore("1.0", peerAccessPoint, path);
+                    break;
+                case "DELETE":
+                    if (args.length != 3)
+                        System.out.println("Usage for RESTORE: java TestApp <peer_ap> DELETE <filepath>");
+                    path = args[2];
+                    initiatorPeer.delete("1.0", peerAccessPoint, path);
+                    break;
+                case "RECLAIM":
+                    if (args.length != 3)
+                        System.out.println("Usage for RECLAIM: java TestApp <peer_ap> RECLAIM <reclaim_space>");
+                    int space = Integer.parseInt(args[2]);
+                    initiatorPeer.reclaim("1.0", peerAccessPoint, space);
+                    break;
+                case "STATE":
                     initiatorPeer.state();
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
+                    break;
+                default:
+                    System.out.println("UNKNOWN COMMAND");
+            }
+        } catch (RemoteException | NotBoundException e) {
+            e.printStackTrace();
         }
 
     }

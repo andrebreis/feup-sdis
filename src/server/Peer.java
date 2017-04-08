@@ -5,9 +5,9 @@ package server;
  */
 public class Peer {
 
-    private int protocolVersion;
+    private String protocolVersion;
     private String serverID;
-    private String serviceAccessPoint;
+    private int serviceAccessPoint;
 
     private String mcAddress;
     private int mcPort;
@@ -19,11 +19,11 @@ public class Peer {
     private int mdrPort;
 
 
-    private void parseArguments(String[] args){
+    private void parseArguments(String[] args) {
 
-        protocolVersion = Integer.parseInt(args[0]);
+        protocolVersion = args[0];
         serverID = args[1];
-        serviceAccessPoint = args[2];
+        serviceAccessPoint = Integer.parseInt(args[2]);
 
         mcAddress = args[3].split(":")[0];
         mcPort = Integer.parseInt(args[3].split(":")[1]);

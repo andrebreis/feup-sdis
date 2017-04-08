@@ -14,9 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class PeerThread extends Thread implements Protocol {
 
-    private static int protocolVersion;
+    private static String protocolVersion;
     public static String serverID;
-    private static String serviceAccessPoint;
+    private static int serviceAccessPoint;
 
     private static String state;
 
@@ -31,7 +31,7 @@ public class PeerThread extends Thread implements Protocol {
 
 //    private MulticastSocket controlChannel, backupChannel, restoreChannel;
 
-    public PeerThread(int protocolVersion, String serverID, String serviceAccessPoint, String mcAddress, int mcPort, String mdbAddress, int mdbPort, String mdrAddress, int mdrPort) {
+    public PeerThread(String protocolVersion, String serverID, int serviceAccessPoint, String mcAddress, int mcPort, String mdbAddress, int mdbPort, String mdrAddress, int mdrPort) {
 
         PeerThread.protocolVersion = protocolVersion;
         PeerThread.serverID = serverID;
@@ -74,7 +74,7 @@ public class PeerThread extends Thread implements Protocol {
     }
 
     @Override
-    public void reclaim(String version, String senderId, String path) throws RemoteException {
+    public void reclaim(String version, String senderId, int space) throws RemoteException {
 
     }
 
