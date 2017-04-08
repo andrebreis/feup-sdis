@@ -66,7 +66,7 @@ public class BackupChannelThread extends ChannelThread {
 
         String headerString = new String(message, 0, headerLength);
 
-        String[] messageParams = headerString.split(" ");
+        String[] messageParams = headerString.split("\\s+");
 
         byte[] body = new byte[length - headerLength];
         if (messageParams[0].equals("PUTCHUNK")) {

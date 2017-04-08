@@ -24,10 +24,6 @@ public class FileManager {
 
     //http://stackoverflow.com/questions/10864317/how-to-break-a-file-into-pieces-using-java
 
-    public static void splitFile(File f) throws IOException {
-
-    }
-
     public static void mergeFiles(ArrayList<File> files, File into)
             throws IOException {
         into.getParentFile().mkdirs();
@@ -39,18 +35,13 @@ public class FileManager {
         }
     }
 
-    public static ArrayList<File> getChunks(String filename, File folder){
+    public static ArrayList<File> getChunks(File folder){
         ArrayList<File> chunkList = new ArrayList<>();
         for(final File fileEntry : folder.listFiles()){
-            if(fileEntry.getName().contains(filename + '.'))
-                chunkList.add(fileEntry);
+            chunkList.add(fileEntry);
         }
         Collections.sort(chunkList);
         return chunkList;
-    }
-
-    public static String getFileId(File file){
-        return "";
     }
 
     public static void backupFile(String filepath, int replicationDegree){
@@ -59,17 +50,17 @@ public class FileManager {
 
         File file = new File(filepath);
 
-        byte[] buffer = new byte[MAX_CHUNK_SIZE];
-
         try (BufferedInputStream bis = new BufferedInputStream(
                 new FileInputStream(file))) {//try-with-resources to ensure closing stream
             String name = file.getName();
 
             int tmp = 0;
             do {
+                byte[] buffer = new byte[MAX_CHUNK_SIZE];
                 tmp = bis.read(buffer);
                 //write each chunk of data into separate file with different number in name
                 backupChunk(buffer, tmp == -1 ? 0 : tmp, replicationDegree, Hash.getFileId(file), chunkNo);
+                chunkNo++;
             } while (tmp == MAX_CHUNK_SIZE);
         } catch (IOException e) {
             e.printStackTrace();
@@ -82,17 +73,20 @@ public class FileManager {
                     int noSentCommands = 0;
 
                     Message putChunk = new Message("PUTCHUNK", "1.0", PeerThread.serverID, fileId, chunkNo, replicationDegree, chunk, chunkSize);
-                    while(noSentCommands < 5 && PeerThread.serversContaining.get(fileId).get(chunkNo).size() < replicationDegree) {
+                    while(noSentCommands < 5 && PeerThread.getCurrentReplication(fileId, chunkNo) < replicationDegree) {
                         putChunk.sendMessage(PeerThread.backupThread.getChannelSocket(), PeerThread.backupThread.getAddress(), PeerThread.backupThread.getPort());
                         try {
                             Thread.sleep(2 ^ noSentCommands * 1000);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
+                        System.out.println("Sending PUTCHUNK no " + Integer.toString(noSentCommands) + "for chunk no " + Integer.toString(chunkNo));
                         noSentCommands++;
                     }
                     if(noSentCommands == 5)
                         System.out.println("Couldn't backup chunk appropriately");
+                    else
+                        System.out.println("Backup finished successfully");
                 }
         );
     };
@@ -125,21 +119,45 @@ public class FileManager {
 
     }
 
+    public static void splitFile(File f) throws IOException {
+        int partCounter = 1;//I like to name parts from 001, 002, 003, ...
+        //you can change it to 0 if you want 000, 001, ...
+
+        byte[] buffer = new byte[MAX_CHUNK_SIZE];
+
+        try (BufferedInputStream bis = new BufferedInputStream(
+                new FileInputStream(f))) {//try-with-resources to ensure closing stream
+            String name = f.getName();
+
+            int tmp = 0;
+            do {
+                tmp = bis.read(buffer);
+                //write each chunk of data into separate file with different number in name
+                File newFile = new File(chunksDirectory, name + "."
+                        + String.format("%03d", partCounter++));
+                try (FileOutputStream out = new FileOutputStream(newFile)) {
+                    out.write(buffer, 0, tmp > 0 ? tmp : 0);//tmp is chunk size
+                }
+            } while (tmp == MAX_CHUNK_SIZE);
+        }
+    }
+
     public static void main(String[] args) throws IOException {
 //        Scanner reader = new Scanner(System.in);  // Reading from System.in
 //        System.out.println("Enter the full path of the file you want to split");
 //        String path = reader.nextLine();
 //        backupFile(path,1);
 
-        FileManager.deleteFile("/home/ines/SDIS/sid.jpg");
+        splitFile(new File("/home/chrx/feup/sdis/new.jpg"));
+//        FileManager.deleteFile("/home/ines/SDIS/sid.jpg");
 //        File toSplit = new File(path);
 //        splitFile(toSplit);
 //        File chunksContainer = new File(chunksDirectory);
-//        ArrayList<File> chunks = getChunks(toSplit.getName(), chunksContainer);
+//        ArrayList<File> chunks = getChunks(chunksContainer);
 //        for (File f:
 //             chunks) {
 //            System.out.println(f.getName());
 //        }
-//        mergeFiles(chunks, new File(restoredFilesDirectory + toSplit.getName()));
+//        mergeFiles(chunks, new File(restoredFilesDirectory + "test.jpg"));
     }
 }

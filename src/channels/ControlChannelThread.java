@@ -43,7 +43,7 @@ public class ControlChannelThread extends ChannelThread {
 
         String headerString = new String(message, 0, headerLength);
 
-        String[] messageParams = headerString.split(" ");
+        String[] messageParams = headerString.split("\\s+");
 
         if (messageParams[0].equals("STORED")) {
             processStored(messageParams);

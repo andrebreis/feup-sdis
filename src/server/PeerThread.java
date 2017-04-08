@@ -82,4 +82,12 @@ public class PeerThread extends Thread implements Protocol {
     public String state() throws RemoteException {
         return null;
     }
+
+    public static int getCurrentReplication(String fileId, int chunkNo){
+        try {
+            return serversContaining.get(fileId).get(chunkNo).size();
+        } catch (NullPointerException npe) {
+            return 0;
+        }
+    }
 }

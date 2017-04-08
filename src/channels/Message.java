@@ -79,7 +79,7 @@ public class Message {
         for (int i = 3; i < length; i++) {
             if (message[i - 3] == '\r' && message[i - 2] == '\n'
                     && message[i - 1] == '\r' && message[i] == '\n')
-                return i;
+                return i+1; // i is index, i+1 is length
         }
         return -1;
     }
