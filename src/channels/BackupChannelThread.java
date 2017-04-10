@@ -66,6 +66,7 @@ public class BackupChannelThread extends ChannelThread {
             }
             else {
                 System.out.println("Not enough space");
+                return;
             }
         }
 
