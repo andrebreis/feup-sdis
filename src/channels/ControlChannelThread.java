@@ -2,17 +2,13 @@ package channels;
 
 import file_manager.FileManager;
 import file_manager.Utils;
-import server.Peer;
+import protocols.BackupProtocol;
 import server.PeerThread;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static file_manager.FileManager.backupChunk;
-import static file_manager.FileManager.getChunk;
 
 /**
  * Created by ines on 29-03-2017.
@@ -24,7 +20,7 @@ public class ControlChannelThread extends ChannelThread {
         super(address, port);
     }
 
-    public void processStored(String[] headerParams) {
+    private void processStored(String[] headerParams) {
         int serverId = Integer.parseInt(headerParams[SENDER_ID]);
         String fileId = headerParams[FILE_ID];
         int chunkNo = Integer.parseInt(headerParams[CHUNK_NO]);
@@ -58,7 +54,7 @@ public class ControlChannelThread extends ChannelThread {
 
         System.out.println("I have this chunk");
 
-        byte[] body = getChunk(fileId,chunkNo);
+        byte[] body = FileManager.getChunk(fileId,chunkNo);
 
         Random generator = new Random();
         try {
@@ -78,7 +74,7 @@ public class ControlChannelThread extends ChannelThread {
             System.out.println("Chunk already sent");
     }
 
-    public void processRemoved(String[] headerParams) {
+    private void processRemoved(String[] headerParams) {
         int serverId = Integer.parseInt(headerParams[SENDER_ID]);
         String fileId = headerParams[FILE_ID];
         int chunkNo = Integer.parseInt(headerParams[CHUNK_NO]);
@@ -93,7 +89,7 @@ public class ControlChannelThread extends ChannelThread {
 
         if(PeerThread.serversContaining.get(fileId).get(chunkNo).size() < PeerThread.desiredFileReplication.get(fileId)){
             System.out.println("Initiating backup for chunk...");
-            byte[] chunk = getChunk(fileId, chunkNo);
+            byte[] chunk = FileManager.getChunk(fileId, chunkNo);
             if(!PeerThread.chunksToBackup.contains(fileId))
                 PeerThread.chunksToBackup.put(fileId, new HashSet<>());
             PeerThread.chunksToBackup.get(fileId).add(chunkNo);
@@ -104,7 +100,7 @@ public class ControlChannelThread extends ChannelThread {
                 return;
             }
             if(PeerThread.chunksToBackup.contains(fileId) && PeerThread.chunksToBackup.get(fileId).contains(chunkNo)) {
-                FileManager.backupChunk(chunk, chunk.length, PeerThread.desiredFileReplication.get(fileId), fileId, chunkNo);
+                BackupProtocol.backupChunk(chunk, chunk.length, PeerThread.desiredFileReplication.get(fileId), fileId, chunkNo);
                 PeerThread.chunksToBackup.get(fileId).remove(chunkNo);
                 System.out.println("Backup successfully initiated");
             }
@@ -128,21 +124,23 @@ public class ControlChannelThread extends ChannelThread {
 
         String[] messageParams = headerString.split("\\s+");
 
-        if (messageParams[0].equals(Message.ANS_BACKUP)) {
-            processStored(messageParams);
-        }
-        else if (messageParams[0].equals(Message.INIT_DELETE)) {
-            try {
-                FileManager.deleteFile(messageParams[FILE_ID]);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        else if(messageParams[0].equals(Message.INIT_RESTORE)){
-            processGetChunk(messageParams);
-        }
-        else if (messageParams[0].equals(Message.RECLAIM)) {
-            processRemoved(messageParams);
+        switch (messageParams[0]) {
+            case Message.ANS_BACKUP:
+                processStored(messageParams);
+                break;
+            case Message.INIT_DELETE:
+                try {
+                    FileManager.deleteFile(messageParams[FILE_ID]);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case Message.INIT_RESTORE:
+                processGetChunk(messageParams);
+                break;
+            case Message.RECLAIM:
+                processRemoved(messageParams);
+                break;
         }
 
     }

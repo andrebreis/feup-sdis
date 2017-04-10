@@ -1,4 +1,4 @@
-import server.Protocol;
+import protocols.Protocol;
 
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;

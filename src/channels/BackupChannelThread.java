@@ -1,14 +1,9 @@
 package channels;
 
-import file_manager.FileManager;
+import file_manager.Utils;
 import server.PeerThread;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.nio.file.Files;
-import java.util.HashSet;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 
 /**
  * Created by ines on 29-03-2017.
@@ -20,30 +15,8 @@ public class BackupChannelThread extends ChannelThread {
         super(address, port);
     }
 
-
-    public void storeChunk(String fileId, int chunkNo, int replicationDegree, byte[] chunk) {
-        if (!PeerThread.savedChunks.containsKey(fileId))
-            PeerThread.savedChunks.put(fileId, new HashSet<>());
-        PeerThread.savedChunks.get(fileId).add(chunkNo);
-
-        if (!PeerThread.desiredFileReplication.containsKey(fileId))
-            PeerThread.desiredFileReplication.put(fileId, replicationDegree);
-
-        if (!PeerThread.serversContaining.containsKey(fileId))
-            PeerThread.serversContaining.put(fileId, new ConcurrentHashMap<>());
-
-        if(!PeerThread.serversContaining.get(fileId).containsKey(chunkNo))
-            PeerThread.serversContaining.get(fileId).put(chunkNo, new HashSet<>());
-
-        PeerThread.serversContaining.get(fileId).get(chunkNo).add(PeerThread.serverID);
-
-        FileManager.storeChunk(chunk, fileId, Integer.toString(chunkNo));
-        PeerThread.updateUsedSpace(chunk.length);
-        PeerThread.saveMetadata();
-    }
-
     //TODO: enhancement wait first and store after
-    public void processPutChunk(String[] headerParams, byte[] body) {
+    private void processPutChunk(String[] headerParams, byte[] body) {
 
         int serverId = Integer.parseInt(headerParams[SENDER_ID]);
         int chunkNumber = Integer.parseInt(headerParams[CHUNK_NO]);
@@ -61,7 +34,7 @@ public class BackupChannelThread extends ChannelThread {
                 PeerThread.deleteOverReplicatedChunks();
             }
             if (PeerThread.canSaveChunk(body.length)) {
-                storeChunk(fileID, chunkNumber, Integer.parseInt(headerParams[REPLICATION_DEG]), body);
+                PeerThread.storeChunk(fileID, chunkNumber, Integer.parseInt(headerParams[REPLICATION_DEG]), body);
                 System.out.println("Chunk Saved");
             }
             else {

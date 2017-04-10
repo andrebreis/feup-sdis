@@ -1,6 +1,6 @@
 package file_manager;
 
-import channels.Message;
+import protocols.BackupProtocol;
 import server.PeerThread;
 
 import java.io.*;
@@ -10,11 +10,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
 /**
  * Created by ines on 29-03-2017.
  */
@@ -25,9 +20,6 @@ public class FileManager {
     final private static String restoredFilesDirectory = "restored_files/";
 
     public final static int MAX_CHUNK_SIZE = 64 * 1000;
-    final private static int MAX_CHUNKS_PER_REQUEST = 10;
-
-    private static ExecutorService threadPool;
 
     //http://stackoverflow.com/questions/10864317/how-to-break-a-file-into-pieces-using-java
 
@@ -77,36 +69,12 @@ public class FileManager {
                 byte[] buffer = new byte[MAX_CHUNK_SIZE];
                 tmp = bis.read(buffer);
                 //write each chunk of data into separate file with different number in name
-                backupChunk(buffer, tmp == -1 ? 0 : tmp, replicationDegree, Utils.getFileId(file), chunkNo);
+                BackupProtocol.backupChunk(buffer, tmp == -1 ? 0 : tmp, replicationDegree, Utils.getFileId(file), chunkNo);
                 chunkNo++;
             } while (tmp == MAX_CHUNK_SIZE);
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public static void backupChunk(byte[] chunk, int chunkSize, int replicationDegree, String fileId, int chunkNo) {
-        Executors.newSingleThreadExecutor().execute(
-                () -> {
-                    int noSentCommands = 0;
-
-                    Message putChunk = new Message(Message.INIT_BACKUP, "1.0", PeerThread.serverID, fileId, chunkNo, replicationDegree, chunk, chunkSize);
-                    while (noSentCommands < Utils.NO_BACKUP_TRIES && PeerThread.getCurrentReplication(fileId, chunkNo) < replicationDegree) {
-                        putChunk.sendMessage(PeerThread.backupThread.getChannelSocket(), PeerThread.backupThread.getAddress(), PeerThread.backupThread.getPort());
-                        try {
-                            Thread.sleep(2 ^ noSentCommands * Utils.SECONDS_TO_MILLISECONDS);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        System.out.println("Sending PUTCHUNK no " + Integer.toString(noSentCommands) + "for chunk no " + Integer.toString(chunkNo));
-                        noSentCommands++;
-                    }
-                    if (noSentCommands == Utils.NO_BACKUP_TRIES)
-                        System.out.println("Couldn't backup chunk nr " + chunkNo + " for file " + fileId + " appropriately");
-                    else
-                        System.out.println("Backup for chunk nr " + chunkNo + " for file " + fileId + " finished successfully");
-                }
-        );
     }
 
     public static void storeChunk(byte[] chunk, String fileId, String chunkNo) {
@@ -160,58 +128,5 @@ public class FileManager {
         }
 
         return null;
-    }
-
-    public static void restoreChunk(String fileId, int chunkNo) {
-        FileManager.threadPool.submit(
-                new Thread(() -> {
-                    Message getChunk = new Message(Message.INIT_RESTORE, "1.0", PeerThread.serverID, fileId, Integer.toString(chunkNo));
-                    do {
-                        getChunk.sendMessage(PeerThread.controlThread.getChannelSocket(), PeerThread.controlThread.getAddress(), PeerThread.controlThread.getPort());
-                        try {
-                            Thread.sleep(3 * Utils.SECONDS_TO_MILLISECONDS);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    } while (!(PeerThread.restoringChunks.get(fileId).containsKey(chunkNo) || receivedAllChunks(fileId)));
-                }
-                ));
-    }
-
-    public static void restoreFile(String filepath) {
-
-        String fileId = Utils.getFileId(new File(filepath));
-
-
-        int chunkNo = 1;
-        PeerThread.restoringChunks.put(fileId, new ConcurrentHashMap<>());
-
-        do {
-            threadPool = Executors.newFixedThreadPool(MAX_CHUNKS_PER_REQUEST);
-            for (int i = chunkNo; i < chunkNo + MAX_CHUNKS_PER_REQUEST; i++) {
-                restoreChunk(fileId, i);
-            }
-            chunkNo += MAX_CHUNKS_PER_REQUEST;
-            threadPool.shutdown();
-            try {
-                if(!threadPool.awaitTermination(MAX_CHUNKS_PER_REQUEST/2, TimeUnit.SECONDS)) {
-                    do {
-                        threadPool.shutdownNow();
-                    }while (!threadPool.isTerminated());
-                    return;
-                }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                return;
-            }
-        } while (!receivedAllChunks(fileId));
-
-        mergeFile(filepath);
-    }
-
-
-    public static boolean receivedAllChunks(String fileId) {
-        byte[] lastChunk = PeerThread.restoringChunks.get(fileId).get(PeerThread.restoringChunks.get(fileId).size());
-        return lastChunk != null && lastChunk.length < MAX_CHUNK_SIZE;
     }
 }

@@ -14,7 +14,7 @@ public class ChannelThread extends Thread {
 
     final int VERSION = 1, SENDER_ID = 2, FILE_ID = 3, CHUNK_NO = 4, REPLICATION_DEG = 5;
 
-    static final int MAX_HEADER_SIZE = 1024;
+    private static final int MAX_HEADER_SIZE = 1024;
     MulticastSocket channelSocket;
     InetAddress address;
     int port;
@@ -63,5 +63,4 @@ public class ChannelThread extends Thread {
 
         }
     }
-
 }

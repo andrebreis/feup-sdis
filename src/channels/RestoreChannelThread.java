@@ -1,12 +1,16 @@
 package channels;
 
 import file_manager.FileManager;
+import file_manager.Utils;
 import server.PeerThread;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by chrx on 4/6/17.
@@ -18,7 +22,7 @@ public class RestoreChannelThread extends ChannelThread {
         super(address, port);
     }
 
-    public void processChunk(String[] headerParams, byte[] body) {
+    private void processChunk(String[] headerParams, byte[] body) {
 
         int serverId = Integer.parseInt(headerParams[SENDER_ID]);
 
@@ -55,5 +59,6 @@ public class RestoreChannelThread extends ChannelThread {
         }
 
     }
+
 
 }
