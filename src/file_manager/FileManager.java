@@ -15,7 +15,7 @@ import java.util.Set;
  */
 public class FileManager {
 
-    final private static String chunksDirectory = "chunks/";
+    final public static String chunksDirectory = "chunks/";
     final public static String metadataPath = ".metadata/metadata";
     final private static String restoredFilesDirectory = "restored_files/";
 

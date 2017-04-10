@@ -54,7 +54,7 @@ public class TestApp {
                     initiatorPeer.reclaim("1.0", peerAccessPoint, space);
                     break;
                 case "STATE":
-                    initiatorPeer.state();
+                    System.out.println(initiatorPeer.state());
                     break;
                 default:
                     System.out.println("UNKNOWN COMMAND");

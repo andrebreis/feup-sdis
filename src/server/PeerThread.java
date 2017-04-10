@@ -1,6 +1,9 @@
 package server;
 
-import channels.*;
+import channels.BackupChannelThread;
+import channels.ControlChannelThread;
+import channels.Message;
+import channels.RestoreChannelThread;
 import file_manager.FileManager;
 import file_manager.Utils;
 import protocols.Protocol;
@@ -18,32 +21,25 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class PeerThread extends Thread implements Protocol {
 
-    private static String protocolVersion;
     public static int serverID;
-    private static int serviceAccessPoint;
-    private static int maximumSpace = -1;
-    private static int usedSpace = 0;
-
-    private static String state;
-
     // < fileId -> < chunkNo -> serversContainingChunk > >
     public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Set<Integer>>> serversContaining;
     // < fileId -> desiredReplication >
     public static ConcurrentHashMap<String, Integer> desiredFileReplication;
     // < fileId -> savedChunks >
     public static ConcurrentHashMap<String, Set<Integer>> savedChunks;
-
     public static ConcurrentHashMap<String, Set<Integer>> sentChunks;
-
     public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, byte[]>> restoringChunks;
-
     public static ConcurrentHashMap<String, String> fileIds;
-
     public static ConcurrentHashMap<String, Set<Integer>> chunksToBackup;
-
     public static ControlChannelThread controlThread;
     public static BackupChannelThread backupThread;
     public static RestoreChannelThread restoreThread;
+    private static String protocolVersion;
+    private static int serviceAccessPoint;
+    private static int maximumSpace = -1;
+    private static int usedSpace = 0;
+    private static String state;
 
     PeerThread(String protocolVersion, int serverID, int serviceAccessPoint, String mcAddress, int mcPort, String mdbAddress, int mdbPort, String mdrAddress, int mdrPort) {
 
@@ -71,36 +67,6 @@ public class PeerThread extends Thread implements Protocol {
         backupThread.start();
         restoreThread.start();
 
-    }
-
-    @SuppressWarnings("unchecked")
-    private void loadMetadata() {
-        File metadata = new File(FileManager.metadataPath);
-
-        if (!metadata.exists()) {
-            metadata.getParentFile().mkdirs();
-            try {
-                metadata.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            try {
-                FileInputStream fileIn = new FileInputStream(metadata);
-                ObjectInputStream in = new ObjectInputStream(fileIn);
-
-                PeerThread.serversContaining = (ConcurrentHashMap<String, ConcurrentHashMap<Integer, Set<Integer>>>) in.readObject();
-                PeerThread.desiredFileReplication = (ConcurrentHashMap<String, Integer>) in.readObject();
-                PeerThread.savedChunks = (ConcurrentHashMap<String, Set<Integer>>) in.readObject();
-                PeerThread.fileIds = (ConcurrentHashMap<String, String>) in.readObject();
-                PeerThread.usedSpace = in.readInt();
-                PeerThread.maximumSpace = in.readInt();
-
-                in.close();
-                fileIn.close();
-            } catch (IOException | ClassNotFoundException ignored) {
-            }
-        }
     }
 
     public static void saveMetadata() {
@@ -133,42 +99,6 @@ public class PeerThread extends Thread implements Protocol {
 
     }
 
-
-    @Override
-    public void backup(String version, String senderId, String path, int replicationDegree) throws RemoteException {
-        fileIds.put(path, Utils.getFileId(new File(path)));
-        FileManager.backupFile(path, replicationDegree);
-    }
-
-    @Override
-    public void restore(String version, String senderId, String path) throws RemoteException {
-        String fileId = fileIds.get(path);
-        if (fileId == null) {
-            System.out.println("Trying to restore Unrecognized File");
-            return;
-        }
-        restoringChunks.put(fileId,new ConcurrentHashMap<>());
-        RestoreProtocol.restoreFile(path);
-    }
-
-    @Override
-    public void delete(String version, String senderId, String path) throws RemoteException {
-        String fileId = Utils.getFileId(new File(path));
-        Message delete = new Message(Message.INIT_DELETE, "1.0", serverID, fileId);
-        delete.sendMessage(controlThread.getChannelSocket(), controlThread.getAddress(), controlThread.getPort());
-    }
-
-    @Override
-    public void reclaim(String version, String senderId, int space) throws RemoteException {
-        maximumSpace = space;
-        freeSpace();
-    }
-
-    @Override
-    public String state() throws RemoteException {
-        return null;
-    }
-
     public static int getCurrentReplication(String fileId, int chunkNo) {
         try {
             return serversContaining.get(fileId).get(chunkNo).size();
@@ -188,7 +118,7 @@ public class PeerThread extends Thread implements Protocol {
         if (!PeerThread.serversContaining.containsKey(fileId))
             PeerThread.serversContaining.put(fileId, new ConcurrentHashMap<>());
 
-        if(!PeerThread.serversContaining.get(fileId).containsKey(chunkNo))
+        if (!PeerThread.serversContaining.get(fileId).containsKey(chunkNo))
             PeerThread.serversContaining.get(fileId).put(chunkNo, new HashSet<>());
 
         PeerThread.serversContaining.get(fileId).get(chunkNo).add(PeerThread.serverID);
@@ -209,27 +139,27 @@ public class PeerThread extends Thread implements Protocol {
 
         deleteOverReplicatedChunks();
 
-        if(usedSpace > maximumSpace) deleteChunksOverCapacity();
+        if (usedSpace > maximumSpace) deleteChunksOverCapacity();
 
         saveMetadata();
     }
 
     public static void deleteOverReplicatedChunks() {
-       for(Map.Entry<String, Set<Integer>> pair : savedChunks.entrySet()) {
+        for (Map.Entry<String, Set<Integer>> pair : savedChunks.entrySet()) {
             String fileId = pair.getKey();
 
-           for (Integer chunkNo : pair.getValue()) {
-               if (serversContaining.get(fileId).get(chunkNo).size() > desiredFileReplication.get(fileId)) {
-                   serversContaining.get(fileId).remove(chunkNo);
-                   savedChunks.get(fileId).remove(chunkNo);
-                   if(savedChunks.get(fileId).size() == 0) savedChunks.remove(fileId);
+            for (Integer chunkNo : pair.getValue()) {
+                if (serversContaining.get(fileId).get(chunkNo).size() > desiredFileReplication.get(fileId)) {
+                    serversContaining.get(fileId).remove(chunkNo);
+                    savedChunks.get(fileId).remove(chunkNo);
+                    if (savedChunks.get(fileId).size() == 0) savedChunks.remove(fileId);
 
-                   usedSpace -= FileManager.deleteChunk(fileId, chunkNo);
+                    usedSpace -= FileManager.deleteChunk(fileId, chunkNo);
 
-                   Message msg = new Message(Message.RECLAIM, "1.0", serverID, fileId, chunkNo.toString());
-                   msg.sendMessage(controlThread.getChannelSocket(), controlThread.getAddress(), controlThread.getPort());
-               }
-           }
+                    Message msg = new Message(Message.RECLAIM, "1.0", serverID, fileId, chunkNo.toString());
+                    msg.sendMessage(controlThread.getChannelSocket(), controlThread.getAddress(), controlThread.getPort());
+                }
+            }
 
         }
     }
@@ -239,30 +169,125 @@ public class PeerThread extends Thread implements Protocol {
             String fileId = pair.getKey();
 
             for (Integer chunkNo : pair.getValue()) {
-                if(serversContaining.get(fileId).get(chunkNo).size() > 1) {
+                if (serversContaining.get(fileId).get(chunkNo).size() > 1) {
                     serversContaining.get(fileId).remove(chunkNo);
                     savedChunks.get(fileId).remove(chunkNo);
-                    if(savedChunks.get(fileId).size() == 0) savedChunks.remove(fileId);
+                    if (savedChunks.get(fileId).size() == 0) savedChunks.remove(fileId);
 
                     usedSpace -= FileManager.deleteChunk(fileId, chunkNo);
 
                     Message msg = new Message(Message.RECLAIM, "1.0", serverID, fileId, chunkNo.toString());
                     msg.sendMessage(controlThread.getChannelSocket(), controlThread.getAddress(), controlThread.getPort());
 
-                    if(usedSpace <= maximumSpace) break;
+                    if (usedSpace <= maximumSpace) break;
                 }
             }
 
-            if(usedSpace <= maximumSpace) break;
+            if (usedSpace <= maximumSpace) break;
 
         }
 
-        if(usedSpace > maximumSpace) System.out.println("Can't free enough chunks while maintaining a copy in any other peer!");
+        if (usedSpace > maximumSpace)
+            System.out.println("Can't free enough chunks while maintaining a copy in any other peer!");
 
     }
 
     private static void updateUsedSpace(int size) {
         usedSpace += size;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void loadMetadata() {
+        File metadata = new File(FileManager.metadataPath);
+
+        if (!metadata.exists()) {
+            metadata.getParentFile().mkdirs();
+            try {
+                metadata.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            try {
+                FileInputStream fileIn = new FileInputStream(metadata);
+                ObjectInputStream in = new ObjectInputStream(fileIn);
+
+                PeerThread.serversContaining = (ConcurrentHashMap<String, ConcurrentHashMap<Integer, Set<Integer>>>) in.readObject();
+                PeerThread.desiredFileReplication = (ConcurrentHashMap<String, Integer>) in.readObject();
+                PeerThread.savedChunks = (ConcurrentHashMap<String, Set<Integer>>) in.readObject();
+                PeerThread.fileIds = (ConcurrentHashMap<String, String>) in.readObject();
+                PeerThread.usedSpace = in.readInt();
+                PeerThread.maximumSpace = in.readInt();
+
+                in.close();
+                fileIn.close();
+            } catch (IOException | ClassNotFoundException ignored) {
+            }
+        }
+    }
+
+    @Override
+    public void backup(String version, String senderId, String path, int replicationDegree) throws RemoteException {
+        String fileId = Utils.getFileId(new File(path));
+        fileIds.put(path, fileId);
+        desiredFileReplication.put(fileId, replicationDegree);
+        FileManager.backupFile(path, replicationDegree);
+    }
+
+    @Override
+    public void restore(String version, String senderId, String path) throws RemoteException {
+        String fileId = fileIds.get(path);
+        if (fileId == null) {
+            System.out.println("Trying to restore Unrecognized File");
+            return;
+        }
+        restoringChunks.put(fileId, new ConcurrentHashMap<>());
+        RestoreProtocol.restoreFile(path);
+    }
+
+    @Override
+    public void delete(String version, String senderId, String path) throws RemoteException {
+        String fileId = Utils.getFileId(new File(path));
+        Message delete = new Message(Message.INIT_DELETE, "1.0", serverID, fileId);
+        delete.sendMessage(controlThread.getChannelSocket(), controlThread.getAddress(), controlThread.getPort());
+    }
+
+    @Override
+    public void reclaim(String version, String senderId, int space) throws RemoteException {
+        maximumSpace = space;
+        freeSpace();
+    }
+
+    @Override
+    public String state() throws RemoteException {
+        String finalString = "Initiated Backups:\n";
+        for (Map.Entry<String, String> pair : fileIds.entrySet()) {
+            String filepath = pair.getKey();
+            String fileId = pair.getValue();
+
+            finalString += String.format("File path: %s\n File id: %s\nDesired Replication Degree: %d\nList of: Chunk - Replication\n", filepath, fileId, desiredFileReplication.get(fileId));
+            for (int chunkNo = 1; chunkNo <= serversContaining.get(fileId).size(); chunkNo++)
+                finalString += String.format("%d - %d\n", chunkNo, serversContaining.get(fileId).get(chunkNo).size());
+
+            finalString += "\n";
+        }
+
+        finalString += "Saved Chunks:\n";
+        for (Map.Entry<String, Set<Integer>> pair :
+                savedChunks.entrySet()) {
+            String fileId = pair.getKey();
+            Set<Integer> chunks = pair.getValue();
+
+            for (Integer chunk :
+                    chunks) {
+                int chunkSize = (int) new File(FileManager.chunksDirectory + fileId + chunk).length();
+                finalString += String.format("File: %s , Chunk Number: %d , Chunk Size: %d, Chunk Replication: %d\n", fileId, chunk, chunkSize, serversContaining.get(fileId).get(chunk).size());
+            }
+        }
+
+        finalString += String.format("Maximum Capacity: %s\nUsed Capacity: %d\n", maximumSpace == -1 ? "INFINITE" : maximumSpace, usedSpace);
+
+        return finalString;
     }
 
 }
