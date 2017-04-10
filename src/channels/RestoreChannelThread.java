@@ -25,14 +25,13 @@ public class RestoreChannelThread extends ChannelThread {
         String fileId = headerParams[FILE_ID];
         int chunkNo = Integer.parseInt(headerParams[CHUNK_NO]);
 
-        System.out.println("got CHUNK");
+        System.out.println("Got CHUNK nr " + chunkNo + " for file " + fileId);
 
         if(!PeerThread.sentChunks.containsKey(fileId))
             PeerThread.sentChunks.put(fileId, new HashSet<>());
         PeerThread.sentChunks.get(fileId).add(chunkNo);
 
         PeerThread.restoringChunks.get(fileId).put(chunkNo, body);
-
     }
 
     public void processMessage(byte[] message, int length) {

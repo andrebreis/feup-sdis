@@ -38,6 +38,7 @@ public class BackupChannelThread extends ChannelThread {
         PeerThread.serversContaining.get(fileId).get(chunkNo).add(PeerThread.serverID);
 
         FileManager.storeChunk(chunk, fileId, Integer.toString(chunkNo));
+        PeerThread.updateUsedSpace(chunk.length);
         PeerThread.saveMetadata();
     }
 
@@ -50,12 +51,30 @@ public class BackupChannelThread extends ChannelThread {
         if (headerParams[SENDER_ID].equals(PeerThread.serverID))
             return;
 
-        //store chunk
-        if (!PeerThread.savedChunks.containsKey(fileID) || !PeerThread.savedChunks.get(fileID).contains(chunkNumber))
-            storeChunk(fileID, chunkNumber, Integer.parseInt(headerParams[REPLICATION_DEG]), body);
+        System.out.println("Got PUTCHUNK for chunk nr " + chunkNumber + " for file " + fileID);
 
-        Message msg = new Message("STORED", headerParams[VERSION], PeerThread.serverID , headerParams[FILE_ID], headerParams[CHUNK_NO]);
-        msg.sendMessageWithDelay(PeerThread.controlThread.channelSocket, PeerThread.controlThread.address, PeerThread.controlThread.port);
+        //store chunk
+        if (!PeerThread.savedChunks.containsKey(fileID) || !PeerThread.savedChunks.get(fileID).contains(chunkNumber)) {
+            if (!PeerThread.canSaveChunk(body.length)) {
+                System.out.println("Not enough space, trying to delete over replicated chunks...");
+                PeerThread.deleteOverReplicatedChunks();
+            }
+            if (PeerThread.canSaveChunk(body.length)) {
+                storeChunk(fileID, chunkNumber, Integer.parseInt(headerParams[REPLICATION_DEG]), body);
+                System.out.println("Chunk Saved");
+            }
+            else {
+                System.out.println("Not enough space");
+            }
+        }
+
+        if(PeerThread.chunksToBackup.containsKey(fileID) && PeerThread.chunksToBackup.get(fileID).contains(chunkNumber))
+            PeerThread.chunksToBackup.get(fileID).remove(chunkNumber);
+
+        if(PeerThread.savedChunks.get(fileID).contains(chunkNumber)) {
+            Message msg = new Message("STORED", headerParams[VERSION], PeerThread.serverID, headerParams[FILE_ID], headerParams[CHUNK_NO]);
+            msg.sendMessageWithDelay(PeerThread.controlThread.channelSocket, PeerThread.controlThread.address, PeerThread.controlThread.port);
+        }
     }
 
     public void processMessage(byte[] message, int length) {

@@ -15,8 +15,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static server.PeerThread.restoringChunks;
-
 /**
  * Created by ines on 29-03-2017.
  */
@@ -29,7 +27,7 @@ public class FileManager {
     final private static int MAX_CHUNK_SIZE = 64 * 1000;
     final private static int MAX_CHUNKS_PER_REQUEST = 10;
 
-    static ExecutorService threadPool;
+    private static ExecutorService threadPool;
 
     //http://stackoverflow.com/questions/10864317/how-to-break-a-file-into-pieces-using-java
 
@@ -104,9 +102,9 @@ public class FileManager {
                         noSentCommands++;
                     }
                     if (noSentCommands == 5)
-                        System.out.println("Couldn't backup chunk appropriately");
+                        System.out.println("Couldn't backup chunk nr " + chunkNo + " for file " + fileId + " appropriately");
                     else
-                        System.out.println("Backup finished successfully");
+                        System.out.println("Backup for chunk nr " + chunkNo + " for file " + fileId + " finished successfully");
                 }
         );
     }
@@ -134,15 +132,23 @@ public class FileManager {
 
         Set<Integer> chunks = PeerThread.savedChunks.get(fileId);
 
-        for (Integer c : chunks) {
-            Path path = Paths.get(chunksDirectory + fileId + c.toString());
-            Files.delete(path);
-        }
+        for(Integer c: chunks)
+            deleteChunk(fileId, c);
 
         PeerThread.savedChunks.remove(fileId);
-
         PeerThread.saveMetadata();
+    }
 
+    public static int deleteChunk(String fileId, int chunkNo) {
+        int size = (int) new File(chunksDirectory + fileId + chunkNo).length();
+        Path path = Paths.get(chunksDirectory + fileId + chunkNo);
+        try {
+            Files.delete(path);
+            return size;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 
     public static byte[] getChunk(String fileId, int chunkNo) {
@@ -169,7 +175,7 @@ public class FileManager {
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-                    } while (!(restoringChunks.get(fileId).containsKey(chunkNo) || receivedAllChunks(fileId)));
+                    } while (!(PeerThread.restoringChunks.get(fileId).containsKey(chunkNo) || receivedAllChunks(fileId)));
                 }
                 ));
     }
@@ -178,18 +184,19 @@ public class FileManager {
 
         String fileId = Hash.getFileId(new File(filepath));
 
-        threadPool = Executors.newFixedThreadPool(MAX_CHUNKS_PER_REQUEST);
+
         int chunkNo = 1;
-        restoringChunks.put(fileId, new ConcurrentHashMap<>());
+        PeerThread.restoringChunks.put(fileId, new ConcurrentHashMap<>());
 
         do {
+            threadPool = Executors.newFixedThreadPool(MAX_CHUNKS_PER_REQUEST);
             for (int i = chunkNo; i < chunkNo + MAX_CHUNKS_PER_REQUEST; i++) {
                 restoreChunk(fileId, i);
             }
             chunkNo += MAX_CHUNKS_PER_REQUEST;
             threadPool.shutdown();
             try {
-                if(!threadPool.awaitTermination(4, TimeUnit.SECONDS)) {
+                if(!threadPool.awaitTermination(MAX_CHUNKS_PER_REQUEST/2, TimeUnit.SECONDS)) {
                     do {
                         threadPool.shutdownNow();
                     }while (!threadPool.isTerminated());
@@ -206,7 +213,7 @@ public class FileManager {
 
 
     public static boolean receivedAllChunks(String fileId) {
-        byte[] lastChunk = restoringChunks.get(fileId).get(restoringChunks.get(fileId).size());
+        byte[] lastChunk = PeerThread.restoringChunks.get(fileId).get(PeerThread.restoringChunks.get(fileId).size());
         return lastChunk != null && lastChunk.length < MAX_CHUNK_SIZE;
     }
 }
