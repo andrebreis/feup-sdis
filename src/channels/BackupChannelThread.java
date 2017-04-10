@@ -45,10 +45,11 @@ public class BackupChannelThread extends ChannelThread {
     //TODO: enhancement wait first and store after
     public void processPutChunk(String[] headerParams, byte[] body) {
 
+        int serverId = Integer.parseInt(headerParams[SENDER_ID]);
         int chunkNumber = Integer.parseInt(headerParams[CHUNK_NO]);
         String fileID = headerParams[FILE_ID];
 
-        if (headerParams[SENDER_ID].equals(PeerThread.serverID))
+        if (serverId == PeerThread.serverID)
             return;
 
         System.out.println("Got PUTCHUNK for chunk nr " + chunkNumber + " for file " + fileID);

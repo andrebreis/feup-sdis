@@ -24,7 +24,7 @@ public class ControlChannelThread extends ChannelThread {
     }
 
     public void processStored(String[] headerParams) {
-
+        int serverId = Integer.parseInt(headerParams[SENDER_ID]);
         String fileId = headerParams[FILE_ID];
         int chunkNo = Integer.parseInt(headerParams[CHUNK_NO]);
 
@@ -35,20 +35,21 @@ public class ControlChannelThread extends ChannelThread {
         if(!PeerThread.serversContaining.get(fileId).containsKey(chunkNo))
             PeerThread.serversContaining.get(fileId).put(chunkNo, new HashSet<>());
 
-        PeerThread.serversContaining.get(fileId).get(chunkNo).add(headerParams[SENDER_ID]);
+        PeerThread.serversContaining.get(fileId).get(chunkNo).add(serverId);
         System.out.println("Server " + headerParams[SENDER_ID] + " saved chunk nr" + chunkNo + " for file " + fileId);
 
         PeerThread.saveMetadata();
     }
 
     public void processRemoved(String[] headerParams) {
+        int serverId = Integer.parseInt(headerParams[SENDER_ID]);
         String fileId = headerParams[FILE_ID];
         int chunkNo = Integer.parseInt(headerParams[CHUNK_NO]);
 
         System.out.println("Server " + headerParams[SENDER_ID] + " deleted chunk " + chunkNo + " for file " + fileId);
 
         if(PeerThread.serversContaining.contains(fileId) && PeerThread.serversContaining.get(fileId).contains(chunkNo))
-            PeerThread.serversContaining.get(fileId).get(chunkNo).remove(headerParams[SENDER_ID]);
+            PeerThread.serversContaining.get(fileId).get(chunkNo).remove(serverId);
 
         if(!PeerThread.savedChunks.contains(fileId) || !PeerThread.savedChunks.get(fileId).contains(chunkNo))
             return;
@@ -112,7 +113,8 @@ public class ControlChannelThread extends ChannelThread {
 
     private void processGetChunk(String[] headerParams){
 
-        if(headerParams[SENDER_ID].equals(PeerThread.serverID)) return;
+        int serverId = Integer.parseInt(headerParams[SENDER_ID]);
+        if(serverId == PeerThread.serverID) return;
 
         String fileId = headerParams[FILE_ID];
         int chunkNo = Integer.parseInt(headerParams[CHUNK_NO]);

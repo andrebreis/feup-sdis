@@ -20,7 +20,9 @@ public class RestoreChannelThread extends ChannelThread {
 
     public void processChunk(String[] headerParams, byte[] body) {
 
-        if(headerParams[SENDER_ID].equals(PeerThread.serverID)) return;
+        int serverId = Integer.parseInt(headerParams[SENDER_ID]);
+
+        if(serverId == PeerThread.serverID) return;
 
         String fileId = headerParams[FILE_ID];
         int chunkNo = Integer.parseInt(headerParams[CHUNK_NO]);

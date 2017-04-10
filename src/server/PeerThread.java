@@ -12,9 +12,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 
 /**
  * Created by chrx on 4/3/17.
@@ -22,7 +19,7 @@ import java.util.concurrent.FutureTask;
 public class PeerThread extends Thread implements Protocol {
 
     private static String protocolVersion;
-    public static String serverID;
+    public static int serverID;
     private static int serviceAccessPoint;
     private static int maximumSpace = -1;
     private static int usedSpace = 0;
@@ -30,7 +27,7 @@ public class PeerThread extends Thread implements Protocol {
     private static String state;
 
     // < fileId -> < chunkNo -> serversContainingChunk > >
-    public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Set<String>>> serversContaining;
+    public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Set<Integer>>> serversContaining;
     // < fileId -> desiredReplication >
     public static ConcurrentHashMap<String, Integer> desiredFileReplication;
     // < fileId -> savedChunks >
@@ -46,7 +43,7 @@ public class PeerThread extends Thread implements Protocol {
 
     public static ChannelThread controlThread, backupThread, restoreThread;
 
-    public PeerThread(String protocolVersion, String serverID, int serviceAccessPoint, String mcAddress, int mcPort, String mdbAddress, int mdbPort, String mdrAddress, int mdrPort) {
+    public PeerThread(String protocolVersion, int serverID, int serviceAccessPoint, String mcAddress, int mcPort, String mdbAddress, int mdbPort, String mdrAddress, int mdrPort) {
 
         PeerThread.protocolVersion = protocolVersion;
         PeerThread.serverID = serverID;
@@ -90,7 +87,7 @@ public class PeerThread extends Thread implements Protocol {
                 FileInputStream fileIn = new FileInputStream(metadata);
                 ObjectInputStream in = new ObjectInputStream(fileIn);
 
-                PeerThread.serversContaining = (ConcurrentHashMap<String, ConcurrentHashMap<Integer, Set<String>>>) in.readObject();
+                PeerThread.serversContaining = (ConcurrentHashMap<String, ConcurrentHashMap<Integer, Set<Integer>>>) in.readObject();
                 PeerThread.desiredFileReplication = (ConcurrentHashMap<String, Integer>) in.readObject();
                 PeerThread.savedChunks = (ConcurrentHashMap<String, Set<Integer>>) in.readObject();
                 PeerThread.fileIds = (ConcurrentHashMap<String, String>) in.readObject();

@@ -10,7 +10,7 @@ import java.rmi.server.UnicastRemoteObject;
 public class Peer {
 
     private String protocolVersion;
-    private String serverID;
+    private int serverID;
     private int serviceAccessPoint;
 
     private String mcAddress;
@@ -26,7 +26,7 @@ public class Peer {
     private void parseArguments(String[] args) {
 
         protocolVersion = args[0];
-        serverID = args[1];
+        serverID = Integer.parseInt(args[1]);
         serviceAccessPoint = Integer.parseInt(args[2]);
 
         mcAddress = args[3].split(":")[0];
@@ -56,7 +56,7 @@ public class Peer {
             Protocol rmiObject = (Protocol) UnicastRemoteObject.exportObject(peer, p.serviceAccessPoint);
             LocateRegistry.createRegistry(p.serviceAccessPoint);
             Registry registry = LocateRegistry.getRegistry();
-            registry.rebind(p.serverID, rmiObject);
+            registry.rebind(Integer.toString(p.serverID), rmiObject);
             System.err.println("Server ready");
         } catch (Exception e) {
             System.err.println("Server exception: " + e.toString());
