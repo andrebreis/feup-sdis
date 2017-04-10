@@ -24,7 +24,7 @@ public class Message {
         if(!chunkNo.equals("-1")) headerString += " " + chunkNo;
         if(replicationDegree != -1) headerString += " " + Integer.toString(replicationDegree);
 
-        headerString += "\r\n\r\n";
+        headerString += " \r\n\r\n";
 
         byte[] headerBytes = headerString.getBytes();
         messageBytes = new byte[headerBytes.length + bodyLength];
