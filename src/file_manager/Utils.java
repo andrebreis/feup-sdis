@@ -10,7 +10,12 @@ import java.security.NoSuchAlgorithmException;
 /**
  * Created by ines on 07-04-2017.
  */
-public class Hash {
+public class Utils {
+
+    final public static int AVOID_CONCURRENCY_SLEEP_DURATION = 401;
+    final public static int NO_BACKUP_TRIES = 5;
+    final public static int SECONDS_TO_MILLISECONDS = 1000;
+
 
     private static byte[] sha256(String file){
 

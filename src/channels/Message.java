@@ -1,5 +1,7 @@
 package channels;
 
+import file_manager.Utils;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -12,6 +14,8 @@ import java.util.concurrent.TimeUnit;
  * Created by ines on 06-04-2017.
  */
 public class Message {
+
+    final public static String INIT_BACKUP = "PUTCHUNK", ANS_BACKUP = "STORED", INIT_RESTORE = "GETCHUNK", ANS_RESTORE = "CHUNK", INIT_DELETE = "DELETE", RECLAIM = "REMOVED";
 
     private String headerString;
     private byte[] messageBytes;
@@ -68,7 +72,7 @@ public class Message {
 
         Executors.newSingleThreadScheduledExecutor().schedule(
                 () -> sendMessage(socket, address, port),
-                generator.nextInt(401),
+                generator.nextInt(Utils.AVOID_CONCURRENCY_SLEEP_DURATION),
                 TimeUnit.MILLISECONDS
 
         );

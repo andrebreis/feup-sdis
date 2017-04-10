@@ -56,19 +56,4 @@ public class RestoreChannelThread extends ChannelThread {
 
     }
 
-    public void run() {
-        while (true) {
-
-            byte[] buffer = new byte[MAX_HEADER_SIZE + MAX_CHUNK_SIZE];
-            try {
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                channelSocket.receive(packet);
-                processMessage(packet.getData(), packet.getLength());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        }
-    }
-
 }

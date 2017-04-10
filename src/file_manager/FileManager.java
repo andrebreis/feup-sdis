@@ -24,7 +24,7 @@ public class FileManager {
     final public static String metadataPath = ".metadata/metadata";
     final private static String restoredFilesDirectory = "restored_files/";
 
-    final private static int MAX_CHUNK_SIZE = 64 * 1000;
+    public final static int MAX_CHUNK_SIZE = 64 * 1000;
     final private static int MAX_CHUNKS_PER_REQUEST = 10;
 
     private static ExecutorService threadPool;
@@ -77,7 +77,7 @@ public class FileManager {
                 byte[] buffer = new byte[MAX_CHUNK_SIZE];
                 tmp = bis.read(buffer);
                 //write each chunk of data into separate file with different number in name
-                backupChunk(buffer, tmp == -1 ? 0 : tmp, replicationDegree, Hash.getFileId(file), chunkNo);
+                backupChunk(buffer, tmp == -1 ? 0 : tmp, replicationDegree, Utils.getFileId(file), chunkNo);
                 chunkNo++;
             } while (tmp == MAX_CHUNK_SIZE);
         } catch (IOException e) {
@@ -90,26 +90,24 @@ public class FileManager {
                 () -> {
                     int noSentCommands = 0;
 
-                    Message putChunk = new Message("PUTCHUNK", "1.0", PeerThread.serverID, fileId, chunkNo, replicationDegree, chunk, chunkSize);
-                    while (noSentCommands < 5 && PeerThread.getCurrentReplication(fileId, chunkNo) < replicationDegree) {
+                    Message putChunk = new Message(Message.INIT_BACKUP, "1.0", PeerThread.serverID, fileId, chunkNo, replicationDegree, chunk, chunkSize);
+                    while (noSentCommands < Utils.NO_BACKUP_TRIES && PeerThread.getCurrentReplication(fileId, chunkNo) < replicationDegree) {
                         putChunk.sendMessage(PeerThread.backupThread.getChannelSocket(), PeerThread.backupThread.getAddress(), PeerThread.backupThread.getPort());
                         try {
-                            Thread.sleep(2 ^ noSentCommands * 1000);
+                            Thread.sleep(2 ^ noSentCommands * Utils.SECONDS_TO_MILLISECONDS);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                         System.out.println("Sending PUTCHUNK no " + Integer.toString(noSentCommands) + "for chunk no " + Integer.toString(chunkNo));
                         noSentCommands++;
                     }
-                    if (noSentCommands == 5)
+                    if (noSentCommands == Utils.NO_BACKUP_TRIES)
                         System.out.println("Couldn't backup chunk nr " + chunkNo + " for file " + fileId + " appropriately");
                     else
                         System.out.println("Backup for chunk nr " + chunkNo + " for file " + fileId + " finished successfully");
                 }
         );
     }
-
-    ;
 
     public static void storeChunk(byte[] chunk, String fileId, String chunkNo) {
         File chunkFile = new File(chunksDirectory, fileId + chunkNo);
@@ -167,11 +165,11 @@ public class FileManager {
     public static void restoreChunk(String fileId, int chunkNo) {
         FileManager.threadPool.submit(
                 new Thread(() -> {
-                    Message getChunk = new Message("GETCHUNK", "1.0", PeerThread.serverID, fileId, Integer.toString(chunkNo));
+                    Message getChunk = new Message(Message.INIT_RESTORE, "1.0", PeerThread.serverID, fileId, Integer.toString(chunkNo));
                     do {
                         getChunk.sendMessage(PeerThread.controlThread.getChannelSocket(), PeerThread.controlThread.getAddress(), PeerThread.controlThread.getPort());
                         try {
-                            Thread.sleep(3000);
+                            Thread.sleep(3 * Utils.SECONDS_TO_MILLISECONDS);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
@@ -182,7 +180,7 @@ public class FileManager {
 
     public static void restoreFile(String filepath) {
 
-        String fileId = Hash.getFileId(new File(filepath));
+        String fileId = Utils.getFileId(new File(filepath));
 
 
         int chunkNo = 1;

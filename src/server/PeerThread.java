@@ -2,13 +2,10 @@ package server;
 
 import channels.*;
 import file_manager.FileManager;
-import file_manager.Hash;
+import file_manager.Utils;
 
 import java.io.*;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.rmi.RemoteException;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -134,7 +131,7 @@ public class PeerThread extends Thread implements Protocol {
 
     @Override
     public void backup(String version, String senderId, String path, int replicationDegree) throws RemoteException {
-        fileIds.put(path,Hash.getFileId(new File(path)));
+        fileIds.put(path, Utils.getFileId(new File(path)));
         FileManager.backupFile(path, replicationDegree);
     }
 
@@ -147,8 +144,8 @@ public class PeerThread extends Thread implements Protocol {
 
     @Override
     public void delete(String version, String senderId, String path) throws RemoteException {
-        String fileId = Hash.getFileId(new File(path));
-        Message delete = new Message("DELETE", "1.0", serverID, fileId);
+        String fileId = Utils.getFileId(new File(path));
+        Message delete = new Message(Message.INIT_DELETE, "1.0", serverID, fileId);
         delete.sendMessage(PeerThread.controlThread.getChannelSocket(), PeerThread.controlThread.getAddress(), PeerThread.controlThread.getPort());
     }
 
@@ -199,7 +196,7 @@ public class PeerThread extends Thread implements Protocol {
 
                    usedSpace -= FileManager.deleteChunk(fileId, chunkNo);
 
-                   Message msg = new Message("REMOVED", "1.0", serverID, fileId, chunkNo.toString());
+                   Message msg = new Message(Message.RECLAIM, "1.0", serverID, fileId, chunkNo.toString());
                    msg.sendMessage(controlThread.getChannelSocket(), controlThread.getAddress(), controlThread.getPort());
                }
            }
@@ -219,7 +216,7 @@ public class PeerThread extends Thread implements Protocol {
 
                     usedSpace -= FileManager.deleteChunk(fileId, chunkNo);
 
-                    Message msg = new Message("REMOVED", "1.0", serverID, fileId, chunkNo.toString());
+                    Message msg = new Message(Message.RECLAIM, "1.0", serverID, fileId, chunkNo.toString());
                     msg.sendMessage(controlThread.getChannelSocket(), controlThread.getAddress(), controlThread.getPort());
 
                     if(usedSpace <= maximumSpace) break;

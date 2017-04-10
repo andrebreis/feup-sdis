@@ -74,7 +74,7 @@ public class BackupChannelThread extends ChannelThread {
             PeerThread.chunksToBackup.get(fileID).remove(chunkNumber);
 
         if(PeerThread.savedChunks.get(fileID).contains(chunkNumber)) {
-            Message msg = new Message("STORED", headerParams[VERSION], PeerThread.serverID, headerParams[FILE_ID], headerParams[CHUNK_NO]);
+            Message msg = new Message(Message.ANS_BACKUP, headerParams[VERSION], PeerThread.serverID, headerParams[FILE_ID], headerParams[CHUNK_NO]);
             msg.sendMessageWithDelay(PeerThread.controlThread.channelSocket, PeerThread.controlThread.address, PeerThread.controlThread.port);
         }
     }
@@ -92,28 +92,11 @@ public class BackupChannelThread extends ChannelThread {
         String[] messageParams = headerString.split("\\s+");
 
         byte[] body = new byte[length - headerLength];
-        if (messageParams[0].equals("PUTCHUNK")) {
+        if (messageParams[0].equals(Message.INIT_BACKUP)) {
             System.arraycopy(message, headerLength, body, 0, length - headerLength);
             processPutChunk(messageParams, body);
         }
 
-    }
-
-
-    public void run() {
-        while (true) {
-
-            byte[] buffer = new byte[MAX_HEADER_SIZE + MAX_CHUNK_SIZE];
-
-            try {
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                channelSocket.receive(packet);
-                processMessage(packet.getData(), packet.getLength());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        }
     }
 
 }

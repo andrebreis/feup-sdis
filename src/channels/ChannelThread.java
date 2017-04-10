@@ -1,6 +1,9 @@
 package channels;
 
+import file_manager.FileManager;
+
 import java.io.IOException;
+import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 
@@ -9,15 +12,14 @@ import java.net.MulticastSocket;
  */
 public class ChannelThread extends Thread {
 
-    protected final int VERSION = 1, SENDER_ID = 2, FILE_ID = 3, CHUNK_NO = 4, REPLICATION_DEG = 5;
+    final int VERSION = 1, SENDER_ID = 2, FILE_ID = 3, CHUNK_NO = 4, REPLICATION_DEG = 5;
 
-    protected static final int MAX_HEADER_SIZE = 1024;
-    protected static final int MAX_CHUNK_SIZE = 64 * 1000;
-    protected MulticastSocket channelSocket;
-    protected InetAddress address;
-    protected int port;
+    static final int MAX_HEADER_SIZE = 1024;
+    MulticastSocket channelSocket;
+    InetAddress address;
+    int port;
 
-    public ChannelThread(String address, int port){
+    ChannelThread(String address, int port){
 
         this.port = port;
 
@@ -42,6 +44,24 @@ public class ChannelThread extends Thread {
 
     public int getPort() {
         return port;
+    }
+
+    public void processMessage(byte[] message, int length) {};
+
+    public void run() {
+        while (true) {
+
+            byte[] buffer = new byte[MAX_HEADER_SIZE + FileManager.MAX_CHUNK_SIZE];
+
+            try {
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                channelSocket.receive(packet);
+                processMessage(packet.getData(), packet.getLength());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
     }
 
 }
