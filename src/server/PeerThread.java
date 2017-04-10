@@ -8,6 +8,8 @@ import java.io.*;
 import java.rmi.RemoteException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by chrx on 4/3/17.
@@ -27,6 +29,12 @@ public class PeerThread extends Thread implements Protocol {
     // < fileId -> savedChunks >
     public static ConcurrentHashMap<String, Set<Integer>> savedChunks;
 
+    public static ConcurrentHashMap<String, Set<Integer>> sentChunks;
+
+    public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, byte[]>> restoringChunks;
+
+    public static ConcurrentHashMap<String, String> fileIds;
+
     public static ChannelThread controlThread, backupThread, restoreThread;
 
     public PeerThread(String protocolVersion, String serverID, int serviceAccessPoint, String mcAddress, int mcPort, String mdbAddress, int mdbPort, String mdrAddress, int mdrPort) {
@@ -39,6 +47,9 @@ public class PeerThread extends Thread implements Protocol {
         PeerThread.serversContaining = new ConcurrentHashMap<>();
         PeerThread.desiredFileReplication = new ConcurrentHashMap<>();
         PeerThread.savedChunks = new ConcurrentHashMap<>();
+        PeerThread.restoringChunks = new ConcurrentHashMap<>();
+        PeerThread.fileIds = new ConcurrentHashMap<>();
+        PeerThread.sentChunks = new ConcurrentHashMap<>();
         loadMetadata();
 
         PeerThread.state = "STARTED";
@@ -112,12 +123,15 @@ public class PeerThread extends Thread implements Protocol {
 
     @Override
     public void backup(String version, String senderId, String path, int replicationDegree) throws RemoteException {
+        fileIds.put(path,Hash.getFileId(new File(path)));
         FileManager.backupFile(path, replicationDegree);
     }
 
     @Override
     public void restore(String version, String senderId, String path) throws RemoteException {
-
+        String fileId = fileIds.get(path);
+        restoringChunks.put(fileId,new ConcurrentHashMap<>());
+        FileManager.restoreFile(path);
     }
 
     @Override

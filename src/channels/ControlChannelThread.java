@@ -7,7 +7,10 @@ import server.PeerThread;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static file_manager.FileManager.getChunk;
 
 /**
  * Created by ines on 29-03-2017.
@@ -59,9 +62,41 @@ public class ControlChannelThread extends ChannelThread {
                 e.printStackTrace();
             }
         }
+        else if(messageParams[0].equals("GETCHUNK")){
+            processGetChunk(messageParams);
+        }
 
     }
 
+    private void processGetChunk(String[] headerParams){
+
+        if(headerParams[SENDER_ID].equals(PeerThread.serverID)) return;
+
+        String fileId = headerParams[FILE_ID];
+        int chunkNo = Integer.parseInt(headerParams[CHUNK_NO]);
+
+        if(!PeerThread.savedChunks.containsKey(fileId) ||
+                !PeerThread.savedChunks.get(fileId).contains(chunkNo)) return;
+
+        System.out.println("I got dis");
+        byte[] body = getChunk(fileId,chunkNo);
+
+        Random generator = new Random();
+        try {
+            Thread.sleep(generator.nextInt(401));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        if(!PeerThread.sentChunks.containsKey(fileId) ||
+                !PeerThread.sentChunks.get(fileId).contains(chunkNo)) {
+            System.out.println("Sending CHUNK...");
+
+            Message msg = new Message("CHUNK", headerParams[VERSION], PeerThread.serverID,
+                    headerParams[FILE_ID], headerParams[CHUNK_NO], body, body.length);
+            msg.sendMessage(PeerThread.restoreThread.channelSocket, PeerThread.restoreThread.address, PeerThread.restoreThread.port);
+        }
+    }
 
     public void run() {
         while (true) {
