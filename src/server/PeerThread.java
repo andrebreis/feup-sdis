@@ -12,6 +12,7 @@ import protocols.RestoreProtocol;
 import java.io.*;
 import java.rmi.RemoteException;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -145,10 +146,14 @@ public class PeerThread extends Thread implements Protocol {
     }
 
     public static void deleteOverReplicatedChunks() {
-        for (Map.Entry<String, Set<Integer>> pair : savedChunks.entrySet()) {
+        Iterator it = savedChunks.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, Set<Integer>> pair = (Map.Entry<String, Set<Integer>>)it.next();
             String fileId = pair.getKey();
 
-            for (Integer chunkNo : pair.getValue()) {
+            Iterator setIt = pair.getValue().iterator();
+            while (setIt.hasNext()){
+                Integer chunkNo = (Integer) setIt.next();
                 if (serversContaining.get(fileId).get(chunkNo).size() > desiredFileReplication.get(fileId)) {
                     serversContaining.get(fileId).remove(chunkNo);
                     savedChunks.get(fileId).remove(chunkNo);
@@ -165,10 +170,14 @@ public class PeerThread extends Thread implements Protocol {
     }
 
     private static void deleteChunksOverCapacity() {
-        for (Map.Entry<String, Set<Integer>> pair : savedChunks.entrySet()) {
+        Iterator it = savedChunks.entrySet().iterator();
+        while(it.hasNext()){
+            Map.Entry<String, Set<Integer>> pair = (Map.Entry<String, Set<Integer>>)it.next();
             String fileId = pair.getKey();
 
-            for (Integer chunkNo : pair.getValue()) {
+            Iterator setIt = pair.getValue().iterator();
+            while (setIt.hasNext()){
+                Integer chunkNo = (Integer) setIt.next();
                 if (serversContaining.get(fileId).get(chunkNo).size() > 1) {
                     serversContaining.get(fileId).remove(chunkNo);
                     savedChunks.get(fileId).remove(chunkNo);
